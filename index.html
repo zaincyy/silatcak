@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Livescore Pencak Silat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+        }
+        .card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-primary {
+            background-color: #1e40af;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #1d4ed8;
+        }
+        .btn-danger {
+            background-color: #b91c1c;
+            color: white;
+        }
+        .btn-danger:hover {
+            background-color: #dc2626;
+        }
+        .btn-secondary {
+            background-color: #4b5563;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background-color: #6b7280;
+        }
+        .btn-warning {
+            background-color: #f59e0b;
+            color: white;
+        }
+        .btn-warning:hover {
+            background-color: #fbbF04;
+        }
+        .hidden {
+            display: none;
+        }
+        .score-display {
+            font-size: 6rem;
+            font-weight: 900;
+            line-height: 1;
+        }
+        .pesilat-merah {
+            background: linear-gradient(135deg, #ef4444, #b91c1c);
+            color: white;
+        }
+        .pesilat-biru {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+        }
+        .notification-banner {
+            animation: fadeInOut 10s ease-in-out forwards;
+        }
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; transform: translateY(-20px); }
+            10%, 90% { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div id="app">
+        <!-- Semua halaman akan dirender di sini oleh JavaScript -->
+    </div>
+
+    <script>
+        const App = {
+            // State aplikasi (data default)
+            data: {
+                match: {
+                    name: 'PARTAI FINAL KELAS A PUTRA',
+                    pesilatMerah: { name: 'PESILAT SUDUT MERAH', perguruan: 'PERGURUAN A' },
+                    pesilatBiru: { name: 'PESILAT SUDUT BIRU', perguruan: 'PERGURUAN B' },
+                },
+                timer: {
+                    initialTime: 180, // 3 menit
+                    time: 180,
+                    isRunning: false,
+                    intervalId: null,
+                },
+                scores: {
+                    juri1: { merah: 0, biru: 0 },
+                    juri2: { merah: 0, biru: 0 },
+                    juri3: { merah: 0, biru: 0 },
+                },
+                dewan: {
+                    lastAction: null,
+                    history: [],
+                },
+                ketua: {
+                    winner: null,
+                },
+                operator: {
+                    runningText: 'SELAMAT DATANG DI ARENA PERTANDINGAN PENCAK SILAT',
+                },
+                users: {
+                    operators: [{ username: 'operator01', pass: '123' }],
+                    // Data juri, dewan, ketua pertandingan bisa ditambahkan di sini jika perlu login
+                },
+                pesertaList: [
+                    { name: 'Iko Uwais', perguruan: 'Tiga Berantai' },
+                    { name: 'Yayan Ruhian', perguruan: 'Pencak Silat Tenaga Dasar' },
+                    { name: 'Cecep Arif Rahman', perguruan: 'Panglipur' },
+                ]
+            },
+
+            // Inisialisasi Aplikasi
+            init() {
+                this.loadData();
+                this.router();
+                window.addEventListener('hashchange', () => this.router());
+                window.addEventListener('storage', (e) => {
+                    if (e.key === 'silat_livescore') {
+                        this.loadData();
+                        this.render();
+                    }
+                });
+            },
+
+            // Router untuk menampilkan halaman berdasarkan URL hash
+            router() {
+                const path = window.location.hash || '#dashboard';
+                const page = path.split('/')[0];
+                const param = path.split('/')[1];
+
+                this.currentPage = page;
+                this.param = param;
+                this.render();
+            },
+
+            // Render halaman yang aktif
+            render() {
+                const appContainer = document.getElementById('app');
+                appContainer.innerHTML = '';
+
+                let pageContent = '';
+                switch (this.currentPage) {
+                    case '#operator':
+                        pageContent = this.renderOperatorPage();
+                        break;
+                    case '#juri':
+                        pageContent = this.renderJuriPage(this.param); // param akan jadi '1', '2', atau '3'
+                        break;
+                    case '#dewan':
+                        pageContent = this.renderDewanPage();
+                        break;
+                    case '#ketua':
+                        pageContent = this.renderKetuaPage();
+                        break;
+                    case '#papan-skor':
+                        pageContent = this.renderPapanSkorPage();
+                        break;
+                    case '#admin':
+                        pageContent = this.renderAdminPage();
+                        break;
+                    default:
+                        pageContent = this.renderDashboard();
+                }
+                appContainer.innerHTML = pageContent;
+                this.attachEventListeners();
+            },
+            
+            // =================================================================
+            // RENDER FUNCTIONS (Membuat HTML untuk setiap halaman)
+            // =================================================================
+
+            renderDashboard() {
+                return `
+                    <div class="text-center mb-8">
+                        <h1 class="text-4xl font-bold text-gray-800">Portal Livescore</h1>
+                        <p class="text-gray-600">Pilih peran Anda untuk melanjutkan</p>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+                        <a href="#admin" class="card text-center hover:shadow-xl hover:-translate-y-1">
+                            <i class="fa-solid fa-user-shield text-5xl text-blue-800 mb-4"></i>
+                            <h2 class="text-xl font-bold">Admin</h2>
+                        </a>
+                        <a href="#operator" class="card text-center hover:shadow-xl hover:-translate-y-1">
+                            <i class="fa-solid fa-sliders text-5xl text-green-600 mb-4"></i>
+                            <h2 class="text-xl font-bold">Operator</h2>
+                        </a>
+                        <a href="#ketua" class="card text-center hover:shadow-xl hover:-translate-y-1">
+                            <i class="fa-solid fa-gavel text-5xl text-purple-600 mb-4"></i>
+                            <h2 class="text-xl font-bold">Ketua Pertandingan</h2>
+                        </a>
+                        <a href="#dewan" class="card text-center hover:shadow-xl hover:-translate-y-1">
+                            <i class="fa-solid fa-book-open text-5xl text-yellow-600 mb-4"></i>
+                            <h2 class="text-xl font-bold">Dewan</h2>
+                        </a>
+                        <a href="#juri/1" class="card text-center hover:shadow-xl hover:-translate-y-1">
+                            <i class="fa-solid fa-user-tie text-5xl text-red-600 mb-4"></i>
+                            <h2 class="text-xl font-bold">Juri 1</h2>
+                        </a>
+                        <a href="#juri/2" class="card text-center hover:shadow-xl hover:-translate-y-1">
+                            <i class="fa-solid fa-user-tie text-5xl text-red-600 mb-4"></i>
+                            <h2 class="text-xl font-bold">Juri 2</h2>
+                        </a>
+                        <a href="#juri/3" class="card text-center hover:shadow-xl hover:-translate-y-1">
+                            <i class="fa-solid fa-user-tie text-5xl text-red-600 mb-4"></i>
+                            <h2 class="text-xl font-bold">Juri 3</h2>
+                        </a>
+                        <a href="#papan-skor" target="_blank" class="card text-center hover:shadow-xl hover:-translate-y-1 col-span-2 md:col-span-1 lg:col-span-1">
+                           <i class="fa-solid fa-tv text-5xl text-gray-700 mb-4"></i>
+                           <h2 class="text-xl font-bold">Papan Skor Publik</h2>
+                        </a>
+                    </div>
+                `;
+            },
+            
+            renderAdminPage() {
+                let operatorList = this.data.users.operators.map((op, index) => `
+                    <tr class="border-b">
+                        <td class="p-2">${op.username}</td>
+                        <td class="p-2">******</td>
+                        <td class="p-2"><button class="btn btn-danger text-sm" data-action="deleteOperator" data-index="${index}">Hapus</button></td>
+                    </tr>
+                `).join('');
+
+                return `
+                    <a href="#dashboard" class="text-blue-600 mb-4 inline-block"><i class="fas fa-arrow-left"></i> Kembali ke Dashboard</a>
+                    <h1 class="text-3xl font-bold mb-4">Admin: Manajemen Operator</h1>
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <div class="card">
+                            <h2 class="text-2xl font-semibold mb-4">Tambah Operator Baru</h2>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Username</label>
+                                    <input id="newOpUsername" type="text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Password</label>
+                                    <input id="newOpPass" type="password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2">
+                                </div>
+                                <button class="btn btn-primary w-full" data-action="addOperator">Tambah</button>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <h2 class="text-2xl font-semibold mb-4">Daftar Operator</h2>
+                            <table class="w-full text-left">
+                                <thead><tr class="border-b"><th class="p-2">Username</th><th class="p-2">Password</th><th class="p-2">Aksi</th></tr></thead>
+                                <tbody>${operatorList}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            },
+
+            renderOperatorPage() {
+                const { name, pesilatMerah, pesilatBiru } = this.data.match;
+                const { time, isRunning } = this.data.timer;
+                const { runningText } = this.data.operator;
+                const minutes = Math.floor(time / 60).toString().padStart(2, '0');
+                const seconds = (time % 60).toString().padStart(2, '0');
+
+                return `
+                    <a href="#dashboard" class="text-blue-600 mb-4 inline-block"><i class="fas fa-arrow-left"></i> Kembali ke Dashboard</a>
+                    <h1 class="text-3xl font-bold mb-6">Panel Operator</h1>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Kolom Kiri: Pengaturan Pertandingan -->
+                        <div class="card lg:col-span-1">
+                            <h2 class="text-xl font-semibold mb-4">Pengaturan Pertandingan</h2>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Nama Pertandingan</label>
+                                    <input type="text" id="matchName" value="${name}" data-key="match.name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Nama Pesilat Merah</label>
+                                    <input type="text" id="pesilatMerahName" value="${pesilatMerah.name}" data-key="match.pesilatMerah.name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
+                                </div>
+                                 <div>
+                                    <label class="block text-sm font-medium text-gray-700">Perguruan Merah</label>
+                                    <input type="text" id="pesilatMerahPerguruan" value="${pesilatMerah.perguruan}" data-key="match.pesilatMerah.perguruan" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Nama Pesilat Biru</label>
+                                    <input type="text" id="pesilatBiruName" value="${pesilatBiru.name}" data-key="match.pesilatBiru.name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
+                                </div>
+                                 <div>
+                                    <label class="block text-sm font-medium text-gray-700">Perguruan Biru</label>
+                                    <input type="text" id="pesilatBiruPerguruan" value="${pesilatBiru.perguruan}" data-key="match.pesilatBiru.perguruan" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Kolom Tengah: Kontrol Waktu -->
+                        <div class="card lg:col-span-1 text-center">
+                            <h2 class="text-xl font-semibold mb-4">Kontrol Waktu</h2>
+                            <div class="text-7xl font-bold my-6">${minutes}:${seconds}</div>
+                            <div class="flex justify-center space-x-4">
+                                <button data-action="timerPlay" class="btn btn-primary ${isRunning ? 'hidden' : ''}"><i class="fas fa-play"></i> Play</button>
+                                <button data-action="timerPause" class="btn btn-secondary ${!isRunning ? 'hidden' : ''}"><i class="fas fa-pause"></i> Pause</button>
+                                <button data-action="timerReset" class="btn btn-danger"><i class="fas fa-sync"></i> Reset</button>
+                            </div>
+                        </div>
+
+                        <!-- Kolom Kanan: Pengaturan Lain -->
+                        <div class="card lg:col-span-1">
+                            <h2 class="text-xl font-semibold mb-4">Pengaturan Lain</h2>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Running Text</label>
+                                <textarea id="runningText" data-key="operator.runningText" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">${runningText}</textarea>
+                            </div>
+                            <div class="mt-6">
+                                <h3 class="text-lg font-semibold">Reset Data</h3>
+                                <p class="text-sm text-gray-500 mb-2">Mengatur ulang semua skor dan status pertandingan.</p>
+                                <button data-action="resetAll" class="btn btn-warning w-full">Reset Pertandingan</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            },
+            
+            renderJuriPage(juriId) {
+                if (!['1', '2', '3'].includes(juriId)) {
+                    return `<div class="card text-center"><h1 class="text-2xl text-red-600">Juri tidak valid.</h1><a href="#dashboard" class="text-blue-600 mt-4 inline-block">Kembali</a></div>`;
+                }
+                const juriKey = `juri${juriId}`;
+                const { pesilatMerah, pesilatBiru } = this.data.match;
+                const skor = this.data.scores[juriKey];
+
+                return `
+                    <a href="#dashboard" class="text-blue-600 mb-4 inline-block"><i class="fas fa-arrow-left"></i> Kembali ke Dashboard</a>
+                    <h1 class="text-3xl font-bold mb-2 text-center">Panel Juri ${juriId}</h1>
+                    <p class="text-center text-gray-600 mb-6">Klik tombol untuk memberikan nilai.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                        <!-- Panel Merah -->
+                        <div class="card pesilat-merah text-white p-6 text-center">
+                            <h2 class="text-2xl font-bold">${pesilatMerah.name}</h2>
+                            <p class="opacity-80 mb-4">${pesilatMerah.perguruan}</p>
+                            <div class="text-7xl font-black my-4">${skor.merah}</div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <button data-action="addScore" data-juri="${juriKey}" data-pesilat="merah" data-value="1" class="btn bg-white/20 hover:bg-white/30 text-lg">+1 Pukulan</button>
+                                <button data-action="addScore" data-juri="${juriKey}" data-pesilat="merah" data-value="2" class="btn bg-white/20 hover:bg-white/30 text-lg">+2 Tendangan</button>
+                                <button data-action="addScore" data-juri="${juriKey}" data-pesilat="merah" data-value="3" class="btn bg-white/20 hover:bg-white/30 text-lg col-span-2">+3 Jatuhan</button>
+                                <button data-action="subtractScore" data-juri="${juriKey}" data-pesilat="merah" data-value="1" class="btn bg-black/20 hover:bg-black/30 text-lg col-span-2">-1 Hapus Nilai</button>
+                            </div>
+                        </div>
+                        <!-- Panel Biru -->
+                        <div class="card pesilat-biru text-white p-6 text-center">
+                            <h2 class="text-2xl font-bold">${pesilatBiru.name}</h2>
+                            <p class="opacity-80 mb-4">${pesilatBiru.perguruan}</p>
+                            <div class="text-7xl font-black my-4">${skor.biru}</div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <button data-action="addScore" data-juri="${juriKey}" data-pesilat="biru" data-value="1" class="btn bg-white/20 hover:bg-white/30 text-lg">+1 Pukulan</button>
+                                <button data-action="addScore" data-juri="${juriKey}" data-pesilat="biru" data-value="2" class="btn bg-white/20 hover:bg-white/30 text-lg">+2 Tendangan</button>
+                                <button data-action="addScore" data-juri="${juriKey}" data-pesilat="biru" data-value="3" class="btn bg-white/20 hover:bg-white/30 text-lg col-span-2">+3 Jatuhan</button>
+                                <button data-action="subtractScore" data-juri="${juriKey}" data-pesilat="biru" data-value="1" class="btn bg-black/20 hover:bg-black/30 text-lg col-span-2">-1 Hapus Nilai</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            },
+            
+            renderDewanPage() {
+                let historyItems = this.data.dewan.history.map(item => `
+                    <li class="border-b py-2">${item.pesilat === 'merah' ? 'MERAH' : 'BIRU'}: ${item.type} - ${new Date(item.timestamp).toLocaleTimeString()}</li>
+                `).join('');
+
+                return `
+                    <a href="#dashboard" class="text-blue-600 mb-4 inline-block"><i class="fas fa-arrow-left"></i> Kembali ke Dashboard</a>
+                    <h1 class="text-3xl font-bold mb-6">Panel Dewan</h1>
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <div class="card">
+                            <h2 class="text-2xl font-semibold mb-4">Input Aksi</h2>
+                            <div class="space-y-3">
+                                <p class="text-gray-600">Pilih aksi dan pesilat yang bersangkutan.</p>
+                                <select id="dewanPesilat" class="w-full rounded-md border-gray-300 shadow-sm p-2">
+                                    <option value="merah">Pesilat Merah</option>
+                                    <option value="biru">Pesilat Biru</option>
+                                </select>
+                                <button data-action="dewanAction" data-type="Teguran" class="btn btn-primary w-full">Teguran</button>
+                                <button data-action="dewanAction" data-type="Binaan" class="btn btn-secondary w-full">Binaan</button>
+                                <button data-action="dewanAction" data-type="Pelanggaran" class="btn btn-warning w-full">Pelanggaran</button>
+                                <button data-action="dewanAction" data-type="Diskualifikasi" class="btn btn-danger w-full">Diskualifikasi</button>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <h2 class="text-2xl font-semibold mb-4">Riwayat Aksi</h2>
+                            <ul class="space-y-2">${historyItems || '<li>Belum ada aksi.</li>'}</ul>
+                        </div>
+                    </div>
+                `;
+            },
+
+            renderKetuaPage() {
+                const { dewan, ketua } = this.data;
+                const lastAction = dewan.lastAction;
+                let dewanInfo = '<p class="text-gray-500">Tidak ada aksi terbaru dari Dewan.</p>';
+                if (lastAction && !lastAction.verified) {
+                    dewanInfo = `
+                        <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4">
+                            <p class="font-bold">Aksi Baru dari Dewan</p>
+                            <p>Pesilat ${lastAction.pesilat.toUpperCase()} mendapat ${lastAction.type}.</p>
+                            <button data-action="verifyDewanAction" class="btn btn-primary text-sm mt-2">Verifikasi</button>
+                        </div>
+                    `;
+                } else if (lastAction && lastAction.verified) {
+                    dewanInfo = '<p class="text-green-600">Aksi terakhir sudah diverifikasi.</p>';
+                }
+
+                let pesertaRows = this.data.pesertaList.map((p, index) => `
+                    <tr class="border-b">
+                        <td class="p-2">${p.name}</td>
+                        <td class="p-2">${p.perguruan}</td>
+                        <td class="p-2"><button data-action="deletePeserta" data-index="${index}" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button></td>
+                    </tr>
+                `).join('');
+
+                return `
+                    <a href="#dashboard" class="text-blue-600 mb-4 inline-block"><i class="fas fa-arrow-left"></i> Kembali ke Dashboard</a>
+                    <h1 class="text-3xl font-bold mb-6">Panel Ketua Pertandingan</h1>
+                    <div class="grid lg:grid-cols-3 gap-6">
+                        <div class="lg:col-span-2 space-y-6">
+                            <div class="card">
+                                <h2 class="text-xl font-semibold mb-4">Status Pertandingan</h2>
+                                ${dewanInfo}
+                                <div class="mt-6">
+                                    <h3 class="text-lg font-semibold">Tentukan Pemenang</h3>
+                                    ${ketua.winner ? `<p class="text-xl font-bold text-green-600">Pemenang telah ditentukan: ${ketua.winner.toUpperCase()}</p>` : ''}
+                                    <div class="flex space-x-4 mt-2 ${ketua.winner ? 'hidden' : ''}">
+                                        <button data-action="setWinner" data-winner="merah" class="btn btn-danger w-full">Menangkan MERAH</button>
+                                        <button data-action="setWinner" data-winner="biru" class="btn btn-primary w-full">Menangkan BIRU</button>
+                                    </div>
+                                </div>
+                            </div>
+                             <div class="card">
+                                <h2 class="text-xl font-semibold mb-4">Acak Pertandingan</h2>
+                                <p class="text-sm text-gray-500 mb-2">Pilih 2 peserta secara acak dari daftar dan atur sebagai pertandingan saat ini.</p>
+                                <button data-action="acakPertandingan" class="btn btn-secondary w-full">Acak Sekarang!</button>
+                            </div>
+                        </div>
+                        <div class="lg:col-span-1 card">
+                            <h2 class="text-xl font-semibold mb-4">Manajemen Peserta</h2>
+                            <div class="space-y-2 mb-4">
+                                <input id="pesertaName" type="text" placeholder="Nama Pesilat" class="w-full rounded-md border-gray-300 p-2">
+                                <input id="pesertaPerguruan" type="text" placeholder="Nama Perguruan" class="w-full rounded-md border-gray-300 p-2">
+                                <button data-action="addPeserta" class="btn btn-primary w-full">Tambah Peserta</button>
+                            </div>
+                            <h3 class="font-semibold mt-4">Daftar Peserta</h3>
+                            <div class="h-64 overflow-y-auto">
+                                <table class="w-full text-left text-sm">
+                                    <thead><tr class="border-b"><th class="p-2">Nama</th><th class="p-2">Perguruan</th><th class="p-2">Aksi</th></tr></thead>
+                                    <tbody>${pesertaRows}</tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            },
+            
+            renderPapanSkorPage() {
+                const { match, scores, timer, operator, dewan, ketua } = this.data;
+                const totalMerah = scores.juri1.merah + scores.juri2.merah + scores.juri3.merah;
+                const totalBiru = scores.juri1.biru + scores.juri2.biru + scores.juri3.biru;
+                const minutes = Math.floor(timer.time / 60).toString().padStart(2, '0');
+                const seconds = (timer.time % 60).toString().padStart(2, '0');
+
+                let dewanNotification = '';
+                if (dewan.lastAction && dewan.lastAction.verified) {
+                     dewanNotification = `
+                        <div class="notification-banner absolute top-4 left-1/2 -translate-x-1/2 bg-yellow-400 text-black font-bold p-4 rounded-lg shadow-lg z-50">
+                            DEWAN: PESILAT ${dewan.lastAction.pesilat.toUpperCase()} - ${dewan.lastAction.type}
+                        </div>
+                    `;
+                }
+                
+                let winnerOverlay = '';
+                if (ketua.winner) {
+                    const winnerData = ketua.winner === 'merah' ? match.pesilatMerah : match.pesilatBiru;
+                    const winnerColor = ketua.winner === 'merah' ? 'pesilat-merah' : 'pesilat-biru';
+                    winnerOverlay = `
+                        <div class="absolute inset-0 bg-black/70 flex flex-col justify-center items-center z-40 text-white">
+                            <h2 class="text-3xl font-bold mb-4">Pertandingan Selesai</h2>
+                            <div class="text-center p-8 rounded-lg ${winnerColor} w-1/2">
+                                <p class="text-2xl">Pemenang</p>
+                                <h1 class="text-6xl font-black my-2">${winnerData.name}</h1>
+                                <p class="text-2xl">${winnerData.perguruan}</p>
+                            </div>
+                            <button data-action="closeWinner" class="btn btn-secondary mt-8">Tutup</button>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="min-h-screen bg-gray-900 text-white p-4 relative">
+                        ${dewanNotification}
+                        ${winnerOverlay}
+                        <header class="text-center py-4">
+                            <h1 class="text-2xl md:text-4xl font-bold tracking-wider">${match.name}</h1>
+                        </header>
+                        
+                        <main class="grid grid-cols-12 gap-4 my-4">
+                            <!-- Skor Merah -->
+                            <div class="col-span-5 pesilat-merah p-4 rounded-lg flex flex-col justify-between">
+                                <div class="text-center">
+                                    <h2 class="text-2xl md:text-4xl font-bold">${match.pesilatMerah.name}</h2>
+                                    <p class="text-sm md:text-lg opacity-80">${match.pesilatMerah.perguruan}</p>
+                                </div>
+                                <div class="text-center score-display my-4">${totalMerah}</div>
+                                <div class="grid grid-cols-3 gap-2 text-center text-black">
+                                    <div class="bg-white/80 p-2 rounded">J1: ${scores.juri1.merah}</div>
+                                    <div class="bg-white/80 p-2 rounded">J2: ${scores.juri2.merah}</div>
+                                    <div class="bg-white/80 p-2 rounded">J3: ${scores.juri3.merah}</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Tengah -->
+                            <div class="col-span-2 flex flex-col justify-center items-center">
+                                <div class="text-6xl md:text-8xl font-mono font-bold">${minutes}:${seconds}</div>
+                                <div class="text-4xl font-bold my-4">VS</div>
+                            </div>
+
+                            <!-- Skor Biru -->
+                            <div class="col-span-5 pesilat-biru p-4 rounded-lg flex flex-col justify-between">
+                                <div class="text-center">
+                                    <h2 class="text-2xl md:text-4xl font-bold">${match.pesilatBiru.name}</h2>
+                                    <p class="text-sm md:text-lg opacity-80">${match.pesilatBiru.perguruan}</p>
+                                </div>
+                                <div class="text-center score-display my-4">${totalBiru}</div>
+                                <div class="grid grid-cols-3 gap-2 text-center text-black">
+                                    <div class="bg-white/80 p-2 rounded">J1: ${scores.juri1.biru}</div>
+                                    <div class="bg-white/80 p-2 rounded">J2: ${scores.juri2.biru}</div>
+                                    <div class="bg-white/80 p-2 rounded">J3: ${scores.juri3.biru}</div>
+                                </div>
+                            </div>
+                        </main>
+
+                        <footer class="fixed bottom-0 left-0 right-0 bg-black/50 p-2 overflow-hidden">
+                            <p class="text-lg whitespace-nowrap animate-marquee">${operator.runningText}</p>
+                        </footer>
+                        <style>
+                            @keyframes marquee {
+                                0% { transform: translateX(100%); }
+                                100% { transform: translateX(-100%); }
+                            }
+                            .animate-marquee {
+                                display: inline-block;
+                                animation: marquee 15s linear infinite;
+                            }
+                        </style>
+                    </div>
+                `;
+            },
+
+
+            // =================================================================
+            // EVENT LISTENERS & HANDLERS
+            // =================================================================
+
+            attachEventListeners() {
+                const appContainer = document.getElementById('app');
+                
+                // Event listener untuk input
+                appContainer.querySelectorAll('input, textarea').forEach(input => {
+                    input.addEventListener('input', (e) => {
+                        const keyPath = e.target.dataset.key;
+                        if (keyPath) {
+                            this.updateData(keyPath, e.target.value);
+                        }
+                    });
+                });
+
+                // Event listener untuk tombol
+                appContainer.addEventListener('click', (e) => {
+                    const button = e.target.closest('button');
+                    if (!button) return;
+
+                    const action = button.dataset.action;
+                    if (action) {
+                        this.handleAction(action, button.dataset);
+                    }
+                });
+            },
+
+            handleAction(action, dataset) {
+                switch (action) {
+                    // Admin Actions
+                    case 'addOperator':
+                        const username = document.getElementById('newOpUsername').value;
+                        const pass = document.getElementById('newOpPass').value;
+                        if (username && pass) {
+                            this.data.users.operators.push({ username, pass });
+                            this.saveAndRender();
+                        } else {
+                            alert('Username dan password tidak boleh kosong.');
+                        }
+                        break;
+                    case 'deleteOperator':
+                        if (confirm('Anda yakin ingin menghapus operator ini?')) {
+                            this.data.users.operators.splice(dataset.index, 1);
+                            this.saveAndRender();
+                        }
+                        break;
+                    
+                    // Operator Actions
+                    case 'timerPlay':
+                        this.timerPlay();
+                        break;
+                    case 'timerPause':
+                        this.timerPause();
+                        break;
+                    case 'timerReset':
+                        this.timerReset();
+                        break;
+                    case 'resetAll':
+                        if (confirm('Anda yakin ingin mereset seluruh pertandingan? Skor dan status akan kembali ke awal.')) {
+                            this.resetMatch();
+                            this.saveAndRender();
+                        }
+                        break;
+
+                    // Juri Actions
+                    case 'addScore':
+                        this.data.scores[dataset.juri][dataset.pesilat] += parseInt(dataset.value);
+                        this.saveAndRender();
+                        break;
+                    case 'subtractScore':
+                        this.data.scores[dataset.juri][dataset.pesilat] = Math.max(0, this.data.scores[dataset.juri][dataset.pesilat] - parseInt(dataset.value));
+                        this.saveAndRender();
+                        break;
+
+                    // Dewan Actions
+                    case 'dewanAction':
+                        const pesilat = document.getElementById('dewanPesilat').value;
+                        const actionData = {
+                            type: dataset.type,
+                            pesilat: pesilat,
+                            timestamp: new Date().toISOString(),
+                            verified: false,
+                        };
+                        this.data.dewan.lastAction = actionData;
+                        this.data.dewan.history.unshift(actionData);
+                        this.saveAndRender();
+                        break;
+
+                    // Ketua Actions
+                    case 'verifyDewanAction':
+                        if (this.data.dewan.lastAction) {
+                            this.data.dewan.lastAction.verified = true;
+                            // Hapus notifikasi setelah beberapa saat di papan skor
+                            setTimeout(() => {
+                                this.data.dewan.lastAction = null;
+                                this.saveAndRender();
+                            }, 10000);
+                            this.saveAndRender();
+                        }
+                        break;
+                    case 'setWinner':
+                        if (confirm(`Anda yakin ingin menetapkan ${dataset.winner.toUpperCase()} sebagai pemenang?`)) {
+                            this.data.ketua.winner = dataset.winner;
+                            this.timerPause();
+                            this.saveAndRender();
+                        }
+                        break;
+                    case 'addPeserta':
+                        const name = document.getElementById('pesertaName').value;
+                        const perguruan = document.getElementById('pesertaPerguruan').value;
+                        if(name && perguruan) {
+                            this.data.pesertaList.push({name, perguruan});
+                            this.saveAndRender();
+                        }
+                        break;
+                    case 'deletePeserta':
+                        this.data.pesertaList.splice(dataset.index, 1);
+                        this.saveAndRender();
+                        break;
+                    case 'acakPertandingan':
+                        this.acakPertandingan();
+                        break;
+                    case 'closeWinner':
+                         this.resetMatch();
+                         this.saveAndRender();
+                        break;
+                }
+            },
+
+            // =================================================================
+            // LOGIC & DATA FUNCTIONS
+            // =================================================================
+            
+            saveData() {
+                localStorage.setItem('silat_livescore', JSON.stringify(this.data));
+            },
+
+            loadData() {
+                const savedData = localStorage.getItem('silat_livescore');
+                if (savedData) {
+                    // Gabungkan data tersimpan dengan data default untuk memastikan semua properti ada
+                    const parsedData = JSON.parse(savedData);
+                    this.data = { ...this.data, ...parsedData };
+                }
+            },
+            
+            saveAndRender() {
+                this.saveData();
+                this.render();
+            },
+            
+            // Fungsi untuk update data secara dinamis dari input
+            updateData(keyPath, value) {
+                let current = this.data;
+                const keys = keyPath.split('.');
+                keys.forEach((key, index) => {
+                    if (index === keys.length - 1) {
+                        current[key] = value;
+                    } else {
+                        current = current[key];
+                    }
+                });
+                this.saveData(); // Simpan setiap ada perubahan
+            },
+
+            timerPlay() {
+                if (this.data.timer.isRunning) return;
+                this.data.timer.isRunning = true;
+                this.data.timer.intervalId = setInterval(() => {
+                    if (this.data.timer.time > 0) {
+                        this.data.timer.time--;
+                        this.saveAndRender();
+                    } else {
+                        this.timerPause();
+                    }
+                }, 1000);
+                this.saveAndRender();
+            },
+
+            timerPause() {
+                clearInterval(this.data.timer.intervalId);
+                this.data.timer.isRunning = false;
+                this.saveAndRender();
+            },
+
+            timerReset() {
+                this.timerPause();
+                this.data.timer.time = this.data.timer.initialTime;
+                this.saveAndRender();
+            },
+
+            resetMatch() {
+                this.timerPause();
+                this.data.timer.time = this.data.timer.initialTime;
+                this.data.scores = {
+                    juri1: { merah: 0, biru: 0 },
+                    juri2: { merah: 0, biru: 0 },
+                    juri3: { merah: 0, biru: 0 },
+                };
+                this.data.dewan = { lastAction: null, history: [] };
+                this.data.ketua.winner = null;
+                this.saveAndRender();
+            },
+
+            acakPertandingan() {
+                if (this.data.pesertaList.length < 2) {
+                    alert('Tidak cukup peserta untuk diacak. Tambahkan minimal 2 peserta.');
+                    return;
+                }
+                if (!confirm('Ini akan mengganti pesilat saat ini. Lanjutkan?')) return;
+
+                // Acak array
+                let shuffled = [...this.data.pesertaList].sort(() => 0.5 - Math.random());
+                
+                const pesilat1 = shuffled[0];
+                const pesilat2 = shuffled[1];
+
+                this.resetMatch(); // Reset pertandingan sebelum memulai yang baru
+
+                this.data.match.pesilatMerah = pesilat1;
+                this.data.match.pesilatBiru = pesilat2;
+                this.data.match.name = `Pertandingan antara ${pesilat1.name} vs ${pesilat2.name}`;
+
+                this.saveAndRender();
+                alert(`Pertandingan baru telah diatur:\nMERAH: ${pesilat1.name}\nBIRU: ${pesilat2.name}`);
+            }
+        };
+
+        // Jalankan aplikasi
+        App.init();
+    </script>
+
+</body>
+</html>
+
