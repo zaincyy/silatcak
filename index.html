@@ -78,10 +78,35 @@
 <body class="p-4 md:p-8">
 
     <div id="app">
-        <!-- Semua halaman akan dirender di sini oleh JavaScript -->
+        <div class="fixed inset-0 bg-white/80 z-50 flex flex-col items-center justify-center">
+            <div class="text-2xl font-bold text-gray-800">Memuat...</div>
+        </div>
     </div>
 
-    <script>
+    <script type="module">
+        // Import Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        // --- Firebase Configuration ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyClEneOm6l1LoIDSxZiR1eCuLFVdgw4qZQ",
+            authDomain: "silatdorcak.firebaseapp.com",
+            projectId: "silatdorcak",
+            storageBucket: "silatdorcak.appspot.com",
+            messagingSenderId: "955367125494",
+            appId: "1:955367125494:web:6bbff01ec2dfdfc5f9d7d7"
+        };
+        
+        // Initialize Firebase
+        const firebaseApp = initializeApp(firebaseConfig);
+        const auth = getAuth(firebaseApp);
+        const db = getFirestore(firebaseApp);
+
+        // --- Firestore Document Reference ---
+        const matchDocRef = doc(db, "livescore", "match_state");
+
         // IMAGE ICONS
         const PUKULAN_ICON_SOLID = `https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgzH_IQ00ML2WmxBVDDjB8MZ61J5At7mQoOcCF48YP7Z_opzkiJHmDtcigQGNKDXoh5IuNqsrJLKw2mBnClYeHn2Gz49OQuKPF_-CXwvQw_YflbBZiGA45VvaF15-4P5DOSHqexOLTua4NVxeCvFsOVplar3FWieGSZ468XrfgUHIMS-2X9mH77UVGP0g/s1000/1000140690.png`;
         const TENDANGAN_ICON_SOLID = `https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjGMdEBMmP9Oe_peFEcmV3oIglmioQPrJ8d0IQr8oZSYzr6wtro_gmSY5C6Y60qcBLlfeAW0y9y1eatvnoVTgS8CMFifU7w-2yD0hxB1Vn1qC361BMjJITuiYc2b6GwZR33JqbM2CvWmUf8q7KvaxAufCCAUjg-voVPehN2UVEVujbrw-ZNg2jL-v8gcA/s1000/1000140691.png`;
@@ -104,6 +129,8 @@
         };
 
         const App = {
+            isLoggedIn: false,
+            firestoreListenerUnsubscribe: null,
             data: {
                 match: { name: 'PARTAI FINAL KELAS A PUTRA', pesilatMerah: { name: 'PESILAT SUDUT MERAH', perguruan: 'PERGURUAN A' }, pesilatBiru: { name: 'PESILAT SUDUT BIRU', perguruan: 'PERGURUAN B' } },
                 timer: { initialTime: 180, time: 180, isRunning: false, intervalId: null },
@@ -111,26 +138,87 @@
                 dewan: { lastAction: null, history: [] },
                 ketua: { winner: null },
                 operator: { runningText: 'SELAMAT DATANG DI ARENA PERTANDINGAN PENCAK SILAT' },
-                users: { operators: [{ username: 'operator01', pass: '123' }] },
                 pesertaList: [{ name: 'Iko Uwais', perguruan: 'Tiga Berantai' }, { name: 'Yayan Ruhian', perguruan: 'Pencak Silat Tenaga Dasar' }, { name: 'Cecep Arif Rahman', perguruan: 'Panglipur' }]
             },
-            init() { this.loadData(); this.router(); window.addEventListener('hashchange', () => this.router()); window.addEventListener('storage', (e) => { if (e.key === 'silat_livescore') { this.loadData(); this.render(); } }); },
+            init() {
+                onAuthStateChanged(auth, user => {
+                    this.isLoggedIn = !!user;
+                    if (user) {
+                        if (!this.firestoreListenerUnsubscribe) {
+                            this.setupRealtimeListener();
+                        }
+                    } else {
+                        if (this.firestoreListenerUnsubscribe) {
+                            this.firestoreListenerUnsubscribe();
+                            this.firestoreListenerUnsubscribe = null;
+                        }
+                    }
+                    this.router();
+                });
+                window.addEventListener('hashchange', () => this.router());
+            },
+            setupRealtimeListener() {
+                this.firestoreListenerUnsubscribe = onSnapshot(matchDocRef, (doc) => {
+                    if (doc.exists()) {
+                        this.data = doc.data();
+                    } else {
+                        this.saveDataToFirestore();
+                    }
+                    this.render();
+                }, (error) => {
+                    console.error("Firestore listener error:", error);
+                    document.getElementById('app').innerHTML = `<div class="text-red-500 font-bold">Gagal memuat data real-time. Periksa Aturan Keamanan (Rules) Firestore Anda.</div>`;
+                });
+            },
+            async saveDataToFirestore() {
+                try {
+                    await setDoc(matchDocRef, this.data);
+                } catch (error) {
+                    console.error("Error writing to Firestore: ", error);
+                }
+            },
             router() { const path = window.location.hash || '#dashboard'; const page = path.split('/')[0]; const param = path.split('/')[1]; this.currentPage = page; this.param = param; this.render(); },
             render() {
                 const appContainer = document.getElementById('app');
                 appContainer.innerHTML = '';
                 let pageContent = '';
-                switch (this.currentPage) {
-                    case '#operator': pageContent = this.renderOperatorPage(); break;
-                    case '#juri': pageContent = this.renderJuriPage(this.param); break;
-                    case '#dewan': pageContent = this.renderDewanPage(); break;
-                    case '#ketua': pageContent = this.renderKetuaPage(); break;
-                    case '#papan-skor': pageContent = this.renderPapanSkorPage(); break;
-                    case '#admin': pageContent = this.renderAdminPage(); break;
-                    default: pageContent = this.renderDashboard();
+
+                if (!this.isLoggedIn && this.currentPage !== '#papan-skor') {
+                    pageContent = this.renderLoginPage();
+                } else {
+                    switch (this.currentPage) {
+                        case '#operator': pageContent = this.renderOperatorPage(); break;
+                        case '#juri': pageContent = this.renderJuriPage(this.param); break;
+                        case '#dewan': pageContent = this.renderDewanPage(); break;
+                        case '#ketua': pageContent = this.renderKetuaPage(); break;
+                        case '#papan-skor': pageContent = this.renderPapanSkorPage(); break;
+                        case '#admin': pageContent = this.renderAdminPage(); break;
+                        default: pageContent = this.renderDashboard();
+                    }
                 }
                 appContainer.innerHTML = pageContent;
                 this.attachEventListeners();
+            },
+            renderLoginPage() {
+                return `
+                    <div class="min-h-screen flex items-center justify-center bg-gray-100">
+                        <div class="card w-full max-w-sm">
+                            <h2 class="text-2xl font-bold text-center mb-6">Login Panel</h2>
+                            <div id="login-error" class="text-red-500 text-center mb-4 hidden"></div>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Email</label>
+                                    <input id="email" type="email" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Password</label>
+                                    <input id="password" type="password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
+                                </div>
+                                <button data-action="login" class="btn btn-primary w-full">Login</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
             },
             renderDashboard() { 
                 return `
@@ -146,10 +234,13 @@
                         <a href="#juri/2" class="card text-center hover:shadow-xl hover:-translate-y-1"><i class="fa-solid fa-user-tie text-5xl text-red-600 mb-4"></i><h2 class="text-xl font-bold">Juri 2</h2></a>
                         <a href="#juri/3" class="card text-center hover:shadow-xl hover:-translate-y-1"><i class="fa-solid fa-user-tie text-5xl text-red-600 mb-4"></i><h2 class="text-xl font-bold">Juri 3</h2></a>
                         <a href="#papan-skor" target="_blank" class="card text-center hover:shadow-xl hover:-translate-y-1 col-span-2 md:col-span-1 lg:col-span-1"><i class="fa-solid fa-tv text-5xl text-gray-700 mb-4"></i><h2 class="text-xl font-bold">Papan Skor Publik</h2></a>
+                        <div class="col-span-2 md:col-span-3 lg:col-span-4 mt-4">
+                           <button data-action="logout" class="btn btn-danger w-full max-w-xs mx-auto">Logout</button>
+                        </div>
                     </div>
                 `; 
             },
-            renderAdminPage() { let operatorList = this.data.users.operators.map((op, index) => `<tr class="border-b"><td class="p-2">${op.username}</td><td class="p-2">******</td><td class="p-2"><button class="btn btn-danger text-sm" data-action="deleteOperator" data-index="${index}">Hapus</button></td></tr>`).join(''); return `<a href="#dashboard" class="text-blue-600 mb-4 inline-block"><i class="fas fa-arrow-left"></i> Kembali ke Dashboard</a><h1 class="text-3xl font-bold mb-4">Admin: Manajemen Operator</h1><div class="grid md:grid-cols-2 gap-8"><div class="card"><h2 class="text-2xl font-semibold mb-4">Tambah Operator Baru</h2><div class="space-y-4"><div><label class="block text-sm font-medium text-gray-700">Username</label><input id="newOpUsername" type="text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div><div><label class="block text-sm font-medium text-gray-700">Password</label><input id="newOpPass" type="password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div><button class="btn btn-primary w-full" data-action="addOperator">Tambah</button></div></div><div class="card"><h2 class="text-2xl font-semibold mb-4">Daftar Operator</h2><table class="w-full text-left"><thead><tr class="border-b"><th class="p-2">Username</th><th class="p-2">Password</th><th class="p-2">Aksi</th></tr></thead><tbody>${operatorList}</tbody></table></div></div>`; },
+            renderAdminPage() { return `<div class="p-8">Panel admin tidak lagi digunakan. Gunakan Firebase Console untuk mengelola pengguna. <a href="#dashboard" class="text-blue-600">Kembali</a></div>`; },
             renderOperatorPage() {
                 const { name, pesilatMerah, pesilatBiru } = this.data.match;
                 const { time, isRunning, initialTime } = this.data.timer;
@@ -330,11 +421,11 @@
                 const types = ['Binaan', 'Teguran', 'Pelanggaran'];
                 types.forEach(type => {
                     const count = penaltyCounts[type];
-                    let iconHtml = `<div class="w-10 md:w-16 h-10 md:h-16"></div>`; // Placeholder
+                    let iconHtml = `<div class="w-16 h-16"></div>`; // Placeholder
                     if (count === 1) {
-                        iconHtml = `<img src="${PENALTY_ICONS[type][0]}" class="h-10 md:h-16 object-contain" alt="${type} 1">`;
+                        iconHtml = `<img src="${PENALTY_ICONS[type][0]}" class="h-16 object-contain" alt="${type} 1">`;
                     } else if (count >= 2) {
-                        iconHtml = `<img src="${PENALTY_ICONS[type][1]}" class="h-10 md:h-16 object-contain" alt="${type} 2">`;
+                        iconHtml = `<img src="${PENALTY_ICONS[type][1]}" class="h-16 object-contain" alt="${type} 2">`;
                     }
                     html += `<div>${iconHtml}</div>`;
                 });
@@ -386,6 +477,19 @@
             attachEventListeners() { const appContainer = document.getElementById('app'); appContainer.querySelectorAll('input, textarea').forEach(input => { input.addEventListener('input', (e) => { const keyPath = e.target.dataset.key; if (keyPath) this.updateData(keyPath, e.target.value); }); }); appContainer.addEventListener('click', (e) => { const button = e.target.closest('button'); if (!button) return; const action = button.dataset.action; if (action) this.handleAction(action, button.dataset); }); },
             handleAction(action, dataset) {
                 switch (action) {
+                    case 'login':
+                        const emailEl = document.getElementById('email');
+                        const passwordEl = document.getElementById('password');
+                        const errorEl = document.getElementById('login-error');
+                        signInWithEmailAndPassword(auth, emailEl.value, passwordEl.value)
+                            .catch(error => {
+                                errorEl.textContent = "Email atau password salah.";
+                                errorEl.classList.remove('hidden');
+                            });
+                        break;
+                    case 'logout':
+                        signOut(auth);
+                        break;
                     case 'addOperator': const username = document.getElementById('newOpUsername').value; const pass = document.getElementById('newOpPass').value; if (username && pass) { this.data.users.operators.push({ username, pass }); this.saveAndRender(); } else { alert('Username dan password tidak boleh kosong.'); } break;
                     case 'deleteOperator': if (confirm('Anda yakin ingin menghapus operator ini?')) { this.data.users.operators.splice(dataset.index, 1); this.saveAndRender(); } break;
                     case 'timerPlay': this.timerPlay(); break;
@@ -448,15 +552,15 @@
                     case 'toggleFullscreen': this.toggleFullscreen(); break;
                 }
             },
-            saveData() { localStorage.setItem('silat_livescore', JSON.stringify(this.data)); },
-            loadData() { const savedData = localStorage.getItem('silat_livescore'); if (savedData) { const parsedData = JSON.parse(savedData); this.data = { ...this.data, ...parsedData }; } },
-            saveAndRender() { this.saveData(); this.render(); },
-            updateData(keyPath, value) { let current = this.data; const keys = keyPath.split('.'); keys.forEach((key, index) => { if (index === keys.length - 1) current[key] = value; else current = current[key]; }); this.saveData(); },
-            timerPlay() { if (this.data.timer.isRunning) return; this.data.timer.isRunning = true; this.data.timer.intervalId = setInterval(() => { if (this.data.timer.time > 0) { this.data.timer.time--; this.saveAndRender(); } else { this.timerPause(); } }, 1000); this.saveAndRender(); },
-            timerPause() { clearInterval(this.data.timer.intervalId); this.data.timer.isRunning = false; this.saveAndRender(); },
-            timerReset() { this.timerPause(); this.data.timer.time = this.data.timer.initialTime; this.saveAndRender(); },
-            resetMatch() { this.timerPause(); this.data.timer.time = this.data.timer.initialTime; this.data.scores = { juri1: { merah: 0, biru: 0 }, juri2: { merah: 0, biru: 0 }, juri3: { merah: 0, biru: 0 } }; this.data.dewan = { lastAction: null, history: [] }; this.data.ketua.winner = null; this.saveAndRender(); },
-            acakPertandingan() { if (this.data.pesertaList.length < 2) { alert('Tidak cukup peserta untuk diacak. Tambahkan minimal 2 peserta.'); return; } if (!confirm('Ini akan mengganti pesilat saat ini. Lanjutkan?')) return; let shuffled = [...this.data.pesertaList].sort(() => 0.5 - Math.random()); const pesilat1 = shuffled[0]; const pesilat2 = shuffled[1]; this.resetMatch(); this.data.match.pesilatMerah = pesilat1; this.data.match.pesilatBiru = pesilat2; this.data.match.name = `Pertandingan antara ${pesilat1.name} vs ${pesilat2.name}`; this.saveAndRender(); alert(`Pertandingan baru telah diatur:\nMERAH: ${pesilat1.name}\nBIRU: ${pesilat2.name}`); },
+            saveData() { this.saveDataToFirestore(); },
+            loadData() { /* Data is now loaded via Firestore listener */ },
+            saveAndRender() { this.saveDataToFirestore(); },
+            updateData(keyPath, value) { let current = this.data; const keys = keyPath.split('.'); keys.forEach((key, index) => { if (index === keys.length - 1) current[key] = value; else current = current[key]; }); this.saveDataToFirestore(); },
+            timerPlay() { if (this.data.timer.isRunning) return; this.data.timer.isRunning = true; this.data.timer.intervalId = setInterval(() => { if (this.data.timer.time > 0) { this.data.timer.time--; this.saveDataToFirestore(); } else { this.timerPause(); } }, 1000); this.saveDataToFirestore(); },
+            timerPause() { clearInterval(this.data.timer.intervalId); this.data.timer.isRunning = false; this.saveDataToFirestore(); },
+            timerReset() { this.timerPause(); this.data.timer.time = this.data.timer.initialTime; this.saveDataToFirestore(); },
+            resetMatch() { this.timerPause(); this.data.timer.time = this.data.timer.initialTime; this.data.scores = { juri1: { merah: 0, biru: 0 }, juri2: { merah: 0, biru: 0 }, juri3: { merah: 0, biru: 0 } }; this.data.dewan = { lastAction: null, history: [] }; this.data.ketua.winner = null; this.saveDataToFirestore(); },
+            acakPertandingan() { if (this.data.pesertaList.length < 2) { alert('Tidak cukup peserta untuk diacak. Tambahkan minimal 2 peserta.'); return; } if (!confirm('Ini akan mengganti pesilat saat ini. Lanjutkan?')) return; let shuffled = [...this.data.pesertaList].sort(() => 0.5 - Math.random()); const pesilat1 = shuffled[0]; const pesilat2 = shuffled[1]; this.resetMatch(); this.data.match.pesilatMerah = pesilat1; this.data.match.pesilatBiru = pesilat2; this.data.match.name = `Pertandingan antara ${pesilat1.name} vs ${pesilat2.name}`; this.saveDataToFirestore(); alert(`Pertandingan baru telah diatur:\nMERAH: ${pesilat1.name}\nBIRU: ${pesilat2.name}`); },
             toggleFullscreen() {
                 const elem = document.getElementById('fullscreen-container');
                 if (!document.fullscreenElement) {
