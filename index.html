@@ -99,7 +99,7 @@
             ],
             Pelanggaran: [
                 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgi403GzGhjWCXLUfx9yjUrn1jGUll6BfJLASQL0sTeLvS3JQl-rhWo84qaSuS4OJBW1faUe3Sj1Wopp6Rpl6DlfWpkjkloohcs6Bkh7PvwItAZlSHAxKjnJAOQdBFNTrCrshfLdxD5uRBqtAYAmjp1vtZqqx19dY0eOHE9q2vQEcA4tzRYPhD2KO2hkg/s1000/1000140695.png',
-                'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiN9CMQ1x1q7g35xWaIfYbaWrW3__0sLkvCS2rvo4jliRFE8D-fqjW7B5guQbumiJmghJpg05ZFWq596T0rSKwAw_681nuWMnBbInSxlCoXe45ybKP9HMBTHeu2bDKD7z_7HIT7HrpDvujUxWgEfDNRGm9_qNKDyY1n7GopLEeN-tZFSOuRZ05NG6a9-A/s1000/1000140698.png'
+                'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiN9CMQ1x1q7g35xWaIfYbaWrW3__0sLkvCS2rvo4jliRFE8D-fqjW7B5guQbumiJmghJpg05ZFWq596T0rSKwAw_681nuWMnBbInSxlCoXe45ybKP9HMBTHeu2bDKD7z_7HIT7HrpDvujUxWgEfDNRGm9_qNKDyYn7GopLEeN-tZFSOuRZ05NG6a9-A/s1000/1000140698.png'
             ]
         };
 
@@ -158,8 +158,48 @@
                 const seconds = (time % 60).toString().padStart(2, '0');
                 const initialMinutes = Math.floor(initialTime / 60);
                 const initialSeconds = initialTime % 60;
+                let pesertaRows = this.data.pesertaList.map((p, index) => `
+                    <tr class="border-b"><td class="p-2">${p.name}</td><td class="p-2">${p.perguruan}</td><td class="p-2"><button data-action="deletePeserta" data-index="${index}" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button></td></tr>
+                `).join('');
 
-                return `<a href="#dashboard" class="text-blue-600 mb-4 inline-block"><i class="fas fa-arrow-left"></i> Kembali ke Dashboard</a><h1 class="text-3xl font-bold mb-6">Panel Operator</h1><div class="grid grid-cols-1 lg:grid-cols-3 gap-6"><div class="card lg:col-span-1"><h2 class="text-xl font-semibold mb-4">Pengaturan Pertandingan</h2><div class="space-y-4"><div><label class="block text-sm font-medium text-gray-700">Nama Pertandingan</label><input type="text" id="matchName" value="${name}" data-key="match.name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div><div><label class="block text-sm font-medium text-gray-700">Nama Pesilat Merah</label><input type="text" id="pesilatMerahName" value="${pesilatMerah.name}" data-key="match.pesilatMerah.name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div><div><label class="block text-sm font-medium text-gray-700">Perguruan Merah</label><input type="text" id="pesilatMerahPerguruan" value="${pesilatMerah.perguruan}" data-key="match.pesilatMerah.perguruan" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div><div><label class="block text-sm font-medium text-gray-700">Nama Pesilat Biru</label><input type="text" id="pesilatBiruName" value="${pesilatBiru.name}" data-key="match.pesilatBiru.name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div><div><label class="block text-sm font-medium text-gray-700">Perguruan Biru</label><input type="text" id="pesilatBiruPerguruan" value="${pesilatBiru.perguruan}" data-key="match.pesilatBiru.perguruan" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div></div></div><div class="card lg:col-span-1 text-center"><h2 class="text-xl font-semibold mb-4">Kontrol Waktu</h2><div class="text-7xl font-bold my-6">${minutes}:${seconds}</div><div class="flex justify-center space-x-4"><button data-action="timerPlay" class="btn btn-primary ${isRunning ? 'hidden' : ''}"><i class="fas fa-play"></i> Play</button><button data-action="timerPause" class="btn btn-secondary ${!isRunning ? 'hidden' : ''}"><i class="fas fa-pause"></i> Pause</button><button data-action="timerReset" class="btn btn-danger"><i class="fas fa-sync"></i> Reset</button></div><div class="mt-6 border-t pt-4"><h3 class="text-lg font-semibold mb-2">Atur Waktu Pertandingan</h3><div class="flex items-center justify-center space-x-2 text-black"><input type="number" id="customMinutes" class="w-20 p-2 text-center border rounded" value="${initialMinutes}"><span class="font-bold text-gray-700">:</span><input type="number" id="customSeconds" class="w-20 p-2 text-center border rounded" value="${initialSeconds}"></div><button data-action="setCustomTime" class="btn btn-primary w-full mt-3">Set Waktu</button></div></div><div class="card lg:col-span-1"><h2 class="text-xl font-semibold mb-4">Pengaturan Lain</h2><div><label class="block text-sm font-medium text-gray-700">Running Text</label><textarea id="runningText" data-key="operator.runningText" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">${runningText}</textarea></div><div class="mt-6"><h3 class="text-lg font-semibold">Reset Data</h3><p class="text-sm text-gray-500 mb-2">Mengatur ulang semua skor dan status pertandingan.</p><button data-action="resetAll" class="btn btn-warning w-full">Reset Pertandingan</button></div></div></div>`;
+                return `
+                    <a href="#dashboard" class="text-blue-600 mb-4 inline-block"><i class="fas fa-arrow-left"></i> Kembali ke Dashboard</a>
+                    <h1 class="text-3xl font-bold mb-6">Panel Operator</h1>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="card lg:col-span-1"><h2 class="text-xl font-semibold mb-4">Pengaturan Pertandingan</h2><div class="space-y-4"><div><label class="block text-sm font-medium text-gray-700">Nama Pertandingan</label><input type="text" id="matchName" value="${name}" data-key="match.name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div><div><label class="block text-sm font-medium text-gray-700">Nama Pesilat Merah</label><input type="text" id="pesilatMerahName" value="${pesilatMerah.name}" data-key="match.pesilatMerah.name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div><div><label class="block text-sm font-medium text-gray-700">Perguruan Merah</label><input type="text" id="pesilatMerahPerguruan" value="${pesilatMerah.perguruan}" data-key="match.pesilatMerah.perguruan" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div><div><label class="block text-sm font-medium text-gray-700">Nama Pesilat Biru</label><input type="text" id="pesilatBiruName" value="${pesilatBiru.name}" data-key="match.pesilatBiru.name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div><div><label class="block text-sm font-medium text-gray-700">Perguruan Biru</label><input type="text" id="pesilatBiruPerguruan" value="${pesilatBiru.perguruan}" data-key="match.pesilatBiru.perguruan" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div></div></div>
+                        <div class="card lg:col-span-1 text-center"><h2 class="text-xl font-semibold mb-4">Kontrol Waktu</h2><div class="text-7xl font-bold my-6">${minutes}:${seconds}</div><div class="flex justify-center space-x-4"><button data-action="timerPlay" class="btn btn-primary ${isRunning ? 'hidden' : ''}"><i class="fas fa-play"></i> Play</button><button data-action="timerPause" class="btn btn-secondary ${!isRunning ? 'hidden' : ''}"><i class="fas fa-pause"></i> Pause</button><button data-action="timerReset" class="btn btn-danger"><i class="fas fa-sync"></i> Reset</button></div><div class="mt-6 border-t pt-4"><h3 class="text-lg font-semibold mb-2">Atur Waktu Pertandingan</h3><div class="flex items-center justify-center space-x-2 text-black"><input type="number" id="customMinutes" class="w-20 p-2 text-center border rounded" value="${initialMinutes}"><span class="font-bold text-gray-700">:</span><input type="number" id="customSeconds" class="w-20 p-2 text-center border rounded" value="${initialSeconds}"></div><button data-action="setCustomTime" class="btn btn-primary w-full mt-3">Set Waktu</button></div></div>
+                        <div class="card lg:col-span-1"><h2 class="text-xl font-semibold mb-4">Pengaturan Lain</h2><div><label class="block text-sm font-medium text-gray-700">Running Text</label><textarea id="runningText" data-key="operator.runningText" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">${runningText}</textarea></div><div class="mt-6"><h3 class="text-lg font-semibold">Reset Data</h3><p class="text-sm text-gray-500 mb-2">Mengatur ulang semua skor dan status pertandingan.</p><button data-action="resetAll" class="btn btn-warning w-full">Reset Pertandingan</button></div></div>
+                    </div>
+                    <div class="card mt-6">
+                        <h2 class="text-2xl font-semibold mb-4">Manajemen Peserta & Pertandingan</h2>
+                        <div class="grid lg:grid-cols-3 gap-6">
+                            <div class="lg:col-span-1">
+                                <h3 class="text-xl font-semibold mb-2">Tambah Peserta</h3>
+                                <div class="space-y-2 mb-4">
+                                    <input id="pesertaName" type="text" placeholder="Nama Pesilat" class="w-full rounded-md border-gray-300 p-2">
+                                    <input id="pesertaPerguruan" type="text" placeholder="Nama Perguruan" class="w-full rounded-md border-gray-300 p-2">
+                                    <button data-action="addPeserta" class="btn btn-primary w-full">Tambah Peserta</button>
+                                </div>
+                            </div>
+                            <div class="lg:col-span-1">
+                                <h3 class="text-xl font-semibold mb-2">Daftar Peserta</h3>
+                                <div class="h-48 overflow-y-auto border rounded-lg p-2">
+                                    <table class="w-full text-left text-sm">
+                                        <thead><tr class="border-b"><th class="p-2">Nama</th><th class="p-2">Perguruan</th><th class="p-2">Aksi</th></tr></thead>
+                                        <tbody>${pesertaRows}</tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="lg:col-span-1">
+                                <h3 class="text-xl font-semibold mb-2">Pertandingan</h3>
+                                <div class="bg-gray-50 p-4 rounded-lg">
+                                    <p class="text-sm text-gray-500 mb-2">Pilih 2 peserta acak dari daftar dan atur sebagai pertandingan saat ini.</p>
+                                    <button data-action="acakPertandingan" class="btn btn-secondary w-full">Acak Pertandingan!</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
             },
             renderJuriPage(juriId) {
                 if (!['1', '2', '3'].includes(juriId)) { return `<div class="card text-center"><h1 class="text-2xl text-red-600">Juri tidak valid.</h1><a href="#dashboard" class="text-blue-600 mt-4 inline-block">Kembali</a></div>`; }
@@ -439,3 +479,4 @@
 
 </body>
 </html>
+
