@@ -313,7 +313,7 @@
                 let dewanVerificationUI = '';
                 const lastAction = dewan.lastAction;
 
-                if (lastAction && !lastAction.forwardToKetua && lastAction.juriVotes && lastAction.juriVotes[juriKey] === null) {
+                if (lastAction && lastAction.ketuaApproved === true && lastAction.juriVotes[juriKey] === null) {
                     dewanVerificationUI = `<div class="mb-8"><div class="bg-blue-600 text-white p-3 rounded-t-lg text-xl font-bold">Apakah anda setuju yang di berikan dewan ?</div><div class="flex"><button data-action="juriVerifyDewan" data-juri="${juriKey}" data-vote="yes" class="flex-1 bg-black text-white p-3 text-2xl font-bold rounded-bl-lg hover:bg-gray-700">YA</button><button data-action="juriVerifyDewan" data-juri="${juriKey}" data-vote="no" class="flex-1 bg-black text-white p-3 text-2xl font-bold rounded-br-lg hover:bg-gray-700">TIDAK</button></div></div>`;
                 }
 
@@ -377,7 +377,7 @@
                 });
                 
                 let dewanVerificationUI = `<div class="bg-black text-white p-3 rounded-lg text-center"><p>Tidak ada aksi dari dewan</p></div>`;
-                if (dewan.lastAction && !dewan.lastAction.verified && dewan.lastAction.forwardToKetua) {
+                if (dewan.lastAction && dewan.lastAction.ketuaApproved === null) {
                     dewanVerificationUI = `
                         <div class="bg-black text-white p-3 rounded-lg text-center">
                             <p class="mb-2">Apakah anda ragu?</p>
@@ -492,7 +492,7 @@
                     <style>@keyframes marquee {0% { transform: translateX(100%); } 100% { transform: translateX(-150%); } } .animate-marquee { display: inline-block; padding-left: 100%; animation: marquee 15s linear infinite; }</style>
                 `;
             },
-            attachEventListeners() { const appContainer = document.getElementById('app'); appContainer.querySelectorAll('input, textarea').forEach(input => { input.addEventListener('input', (e) => { const keyPath = e.target.dataset.key; if (keyPath) this.updateData(keyPath, e.target.value); }); }); appContainer.addEventListener('click', (e) => { const button = e.target.closest('button'); if (!button) return; const action = button.dataset.action; if (action) this.handleAction(action, button.dataset); }); },
+            attachEventListeners() { const appContainer = document.getElementById('app'); appContainer.querySelectorAll('input, textarea, select').forEach(el => { el.addEventListener('input', (e) => { const action = e.target.dataset.action; if (action) { this.handleAction(action, e.target.dataset); } else { const keyPath = e.target.dataset.key; if (keyPath) this.updateData(keyPath, e.target.value); } }); }); appContainer.addEventListener('click', (e) => { const button = e.target.closest('button'); if (!button) return; const action = button.dataset.action; if (action) this.handleAction(action, button.dataset); }); },
             handleAction(action, dataset) {
                 switch (action) {
                     case 'login':
@@ -527,7 +527,7 @@
                     case 'resetAll': if (confirm('Anda yakin ingin mereset seluruh pertandingan? Skor dan status akan kembali ke awal.')) { this.resetMatch(); this.saveAndRender(); } break;
                     case 'addScore': this.data.scores[dataset.juri][dataset.pesilat] += parseInt(dataset.value); this.saveAndRender(); break;
                     case 'dewanAction': 
-                        const actionData = { type: dataset.type, pesilat: dataset.pesilat, timestamp: new Date().toISOString(), verified: false, forwardToKetua: false, juriVotes: { juri1: null, juri2: null, juri3: null } }; 
+                        const actionData = { type: dataset.type, pesilat: dataset.pesilat, timestamp: new Date().toISOString(), verified: false, ketuaApproved: null, juriVotes: { juri1: null, juri2: null, juri3: null } }; 
                         this.data.dewan.lastAction = actionData; 
                         
                         if (dataset.type === 'Jatuhan') {
@@ -538,36 +538,26 @@
                         }
 
                         this.saveAndRender(); 
-                        
-                        setTimeout(() => {
-                            if (this.data.dewan.lastAction && this.data.dewan.lastAction.timestamp === actionData.timestamp) {
-                                if (Object.values(this.data.dewan.lastAction.juriVotes).includes(null)) {
-                                    this.data.dewan.lastAction.forwardToKetua = true;
-                                    this.saveAndRender();
-                                } else {
-                                    this.data.dewan.lastAction.verified = true;
-                                    setTimeout(() => { this.data.dewan.lastAction = null; this.saveAndRender(); }, 10000);
-                                    this.saveAndRender();
-                                }
-                            }
-                        }, 3000);
                         break;
                     case 'juriVerifyDewan':
                         if (this.data.dewan.lastAction) {
                             this.data.dewan.lastAction.juriVotes[dataset.juri] = dataset.vote;
+                            
+                            const votes = Object.values(this.data.dewan.lastAction.juriVotes);
+                            if (!votes.includes(null)) { // All juries have voted
+                                const yesVotes = votes.filter(v => v === 'yes').length;
+                                if (yesVotes >= 2) {
+                                    this.data.dewan.lastAction.verified = true;
+                                }
+                                setTimeout(() => { this.data.dewan.lastAction = null; this.saveAndRender(); }, 5000);
+                            }
                             this.saveAndRender();
                         }
                         break;
                     case 'chairmanVoteDewan':
                         if (this.data.dewan.lastAction) {
-                            if (dataset.vote === 'no') { // TIDAK ragu -> Verifikasi
-                                this.data.dewan.lastAction.verified = true;
-                                if (this.data.dewan.lastAction.type === 'Diskualifikasi') {
-                                    const disqualifiedPesilat = this.data.dewan.lastAction.pesilat;
-                                    this.data.ketua.winner = (disqualifiedPesilat === 'merah') ? 'biru' : 'merah';
-                                    this.timerPause();
-                                }
-                                setTimeout(() => { this.data.dewan.lastAction = null; this.saveAndRender(); }, 10000);
+                            if (dataset.vote === 'no') { // TIDAK ragu -> Approve and forward to Juri
+                                this.data.dewan.lastAction.ketuaApproved = true;
                             } else { // YA ragu -> Batalkan
                                 this.data.dewan.lastAction = null;
                             }
@@ -580,6 +570,18 @@
                     case 'acakPertandingan': this.acakPertandingan(); break;
                     case 'closeWinner': this.resetMatch(); this.saveAndRender(); break;
                     case 'toggleFullscreen': this.toggleFullscreen(); break;
+                    case 'selectPesilat':
+                        const index = event.target.value;
+                        if (index) {
+                            const selectedPesilat = this.data.pesertaList[index];
+                            if (dataset.sudut === 'merah') {
+                                this.data.match.pesilatMerah = selectedPesilat;
+                            } else {
+                                this.data.match.pesilatBiru = selectedPesilat;
+                            }
+                            this.saveAndRender();
+                        }
+                        break;
                 }
             },
             saveData() { this.saveDataToFirestore(); },
