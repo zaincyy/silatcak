@@ -546,7 +546,7 @@
                             const votes = Object.values(this.data.dewan.lastAction.juriVotes);
                             if (!votes.includes(null)) { // All juries have voted
                                 const yesVotes = votes.filter(v => v === 'yes').length;
-                                if (yesVotes >= 2) {
+                                if (yesVotes >= 1) { // At least 1 Juri agrees
                                     this.data.dewan.lastAction.verified = true;
                                 }
                                 setTimeout(() => { this.data.dewan.lastAction = null; this.saveAndRender(); }, 5000);
@@ -556,10 +556,16 @@
                         break;
                     case 'chairmanVoteDewan':
                         if (this.data.dewan.lastAction) {
-                            if (dataset.vote === 'no') { // TIDAK ragu -> Approve and forward to Juri
+                            if (dataset.vote === 'no') { // TIDAK ragu -> Sahkan
+                                this.data.dewan.lastAction.verified = true;
+                                if (this.data.dewan.lastAction.type === 'Diskualifikasi') {
+                                    const disqualifiedPesilat = this.data.dewan.lastAction.pesilat;
+                                    this.data.ketua.winner = (disqualifiedPesilat === 'merah') ? 'biru' : 'merah';
+                                    this.timerPause();
+                                }
+                                setTimeout(() => { this.data.dewan.lastAction = null; this.saveAndRender(); }, 10000);
+                            } else { // YA ragu -> Teruskan ke Juri
                                 this.data.dewan.lastAction.ketuaApproved = true;
-                            } else { // YA ragu -> Batalkan
-                                this.data.dewan.lastAction = null;
                             }
                             this.saveAndRender();
                         }
