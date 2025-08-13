@@ -100,25 +100,29 @@
         // --- Firestore Document Reference ---
         const matchDocRef = doc(db, "livescore", "match_state");
 
+        // --- Point Values ---
+        const POIN_PUKULAN = 1;
+        const POIN_TENDANGAN = 2;
+        const POIN_JATUHAN = 3;
+
         // IMAGE ICONS
         const PUKULAN_ICON_SOLID = `https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgzH_IQ00ML2WmxBVDDjB8MZ61J5At7mQoOcCF48YP7Z_opzkiJHmDtcigQGNKDXoh5IuNqsrJLKw2mBnClYeHn2Gz49OQuKPF_-CXwvQw_YflbBZiGA45VvaF15-4P5DOSHqexOLTua4NVxeCvFsOVplar3FWieGSZ468XrfgUHIMS-2X9mH77UVGP0g/s1000/1000140690.png`;
         const TENDANGAN_ICON_SOLID = `https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjGMdEBMmP9Oe_peFEcmV3oIglmioQPrJ8d0IQr8oZSYzr6wtro_gmSY5C6Y60qcBLlfeAW0y9y1eatvnoVTgS8CMFifU7w-2yD0hxB1Vn1qC361BMjJITuiYc2b6GwZR33JqbM2CvWmUf8q7KvaxAufCCAUjg-voVPehN2UVEVujbrw-ZNg2jL-v8gcA/s1000/1000140691.png`;
         const DISKUALIFIKASI_ICON_SOLID = `https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjMVU6OsARlKY0um39JZmV3tyh94kM2o86USqSRK0aqZxP5iMkjzPTKv7gB8cu3UOtnjJPvPdSAL0Ft0UulWf6ZaXRpiyNzl7aj-roirNyfIkjvna0u6hFiKU9Vd5fk3jEgFl-ft-thyphenhyphen1r9YDRkFnNG-KYe-BLXDzEsbrkn-sYoACLwEFnAoDh_OlAlqQ/s1000/1000140692.png`;
         const JATUHAN_ICON_SOLID = `https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjfQJmWxTH0Yyiz2xFfQbEMiZoPZArCjiqq_e5luAhqaVj1zKNmv64Vz7Y_JcZMz9qIssaqanHCX13sxUML9Zq0uF-jjkjESY9sPfKfNNRT4VKmbIU4EthAICV0aSIjuMVe5QKMxL8-lX592nCOahgXneGPg0OPDwwK9YH6CA6F6v8w26UR2oj_99Bpvw/s1000/1000140699.png`;
         
-        // --- CORRECTED PENALTY ICON URLs ---
         const PENALTY_ICONS = {
             Binaan: [
-                'https://i.ibb.co.com/KcRZnQm7/b1.png',
-                'https://i.ibb.co.com/pB3Cv9GK/b2.png'
+                'https://i.ibb.co/0p8N5WQ/b1.png',
+                'https://i.ibb.co/RkCLpVZ/b2.png'
             ],
             Teguran: [
-                'https://i.ibb.co.com/wFPQTrfn/t1.png',
-                'https://i.ibb.co.com/Y7K94q2w/t2.png'
+                'https://i.ibb.co/pBMKgrS/t1.png',
+                'https://i.ibb.co/Z6wsRkd/t2.png'
             ],
             Pelanggaran: [
-                'https://i.ibb.co.com/MyPrd9nS/p1.png',
-                'https://i.ibb.co.com/1YgNRkrp/p2.png'
+                'https://i.ibb.co/p64cqn2/p1.png',
+                'https://i.ibb.co/JW1Tr9v/p2.png'
             ]
         };
 
@@ -316,10 +320,10 @@
                         <a href="#dashboard" class="text-blue-600 mb-4 inline-block">Kembali ke Dashboard</a>
                         ${dewanVerificationUI}
                         <div class="grid grid-cols-2 gap-4">
-                            <button data-action="addScore" data-juri="${juriKey}" data-pesilat="merah" data-value="1" class="bg-red-500 rounded-lg p-4 transform transition-transform hover:scale-105"><img src="${PUKULAN_ICON_SOLID}" class="h-24 w-24 mx-auto"></button>
-                            <button data-action="addScore" data-juri="${juriKey}" data-pesilat="merah" data-value="2" class="bg-red-500 rounded-lg p-4 transform transition-transform hover:scale-105"><img src="${TENDANGAN_ICON_SOLID}" class="h-24 w-24 mx-auto"></button>
-                            <button data-action="addScore" data-juri="${juriKey}" data-pesilat="biru" data-value="1" class="bg-blue-500 rounded-lg p-4 transform transition-transform hover:scale-105"><img src="${PUKULAN_ICON_SOLID}" class="h-24 w-24 mx-auto"></button>
-                            <button data-action="addScore" data-juri="${juriKey}" data-pesilat="biru" data-value="2" class="bg-blue-500 rounded-lg p-4 transform transition-transform hover:scale-105"><img src="${TENDANGAN_ICON_SOLID}" class="h-24 w-24 mx-auto"></button>
+                            <button data-action="addScore" data-juri="${juriKey}" data-pesilat="merah" data-value="${POIN_PUKULAN}" class="bg-red-500 rounded-lg p-4 transform transition-transform hover:scale-105"><img src="${PUKULAN_ICON_SOLID}" class="h-24 w-24 mx-auto"></button>
+                            <button data-action="addScore" data-juri="${juriKey}" data-pesilat="merah" data-value="${POIN_TENDANGAN}" class="bg-red-500 rounded-lg p-4 transform transition-transform hover:scale-105"><img src="${TENDANGAN_ICON_SOLID}" class="h-24 w-24 mx-auto"></button>
+                            <button data-action="addScore" data-juri="${juriKey}" data-pesilat="biru" data-value="${POIN_PUKULAN}" class="bg-blue-500 rounded-lg p-4 transform transition-transform hover:scale-105"><img src="${PUKULAN_ICON_SOLID}" class="h-24 w-24 mx-auto"></button>
+                            <button data-action="addScore" data-juri="${juriKey}" data-pesilat="biru" data-value="${POIN_TENDANGAN}" class="bg-blue-500 rounded-lg p-4 transform transition-transform hover:scale-105"><img src="${TENDANGAN_ICON_SOLID}" class="h-24 w-24 mx-auto"></button>
                         </div>
                         <div class="mt-8 text-6xl font-black text-gray-800">${minutes}:${seconds}</div>
                     </div>
@@ -479,7 +483,7 @@
                         <div class="flex-grow grid grid-cols-11 gap-2 md:gap-4 items-center">
                             <div class="col-span-2 h-full flex flex-col justify-around items-center bg-black border-2 border-white rounded-lg p-2">${this.renderPenaltyIcons(penalties.merah)}</div>
                             <div class="col-span-3 bg-red-600 h-full flex justify-center items-center rounded-lg"><span class="text-6xl sm:text-7xl md:text-8xl font-black">${totalMerah}</span></div>
-                            <div class="col-span-1 h-full flex justify-center items-center"><div class="bg-gray-800 text-yellow-300 w-full h-1/3 flex justify-center items-center text-lg sm:text-xl md:text-4xl font-bold rounded-lg">RONDE <br>1</div></div>
+                            <div class="col-span-1 h-full flex justify-center items-center"><div class="bg-gray-800 text-yellow-300 w-full h-1/3 flex justify-center items-center text-lg sm:text-xl md:text-4xl font-bold rounded-lg">RONDE 1</div></div>
                             <div class="col-span-3 bg-blue-600 h-full flex justify-center items-center rounded-lg"><span class="text-6xl sm:text-7xl md:text-8xl font-black">${totalBiru}</span></div>
                             <div class="col-span-2 h-full flex flex-col justify-around items-center bg-black border-2 border-white rounded-lg p-2">${this.renderPenaltyIcons(penalties.biru)}</div>
                         </div>
@@ -538,7 +542,6 @@
                             if (!votes.includes(null)) { // All juries have voted
                                 const yesVotes = votes.filter(v => v === 'yes').length;
                                 if (yesVotes >= 1) { // At least 1 Juri agrees
-                                    // --- FIX: Add action to history ---
                                     this.data.dewan.history.push({...this.data.dewan.lastAction, verified: true});
                                 }
                                 this.data.dewan.lastAction = null; 
@@ -551,7 +554,6 @@
                         if (this.data.dewan.lastAction) {
                             if (dataset.vote === 'no') { // TIDAK ragu -> Sahkan
                                 const verifiedAction = {...this.data.dewan.lastAction, verified: true};
-                                // --- FIX: Add action to history ---
                                 this.data.dewan.history.push(verifiedAction);
 
                                 if (verifiedAction.type === 'Diskualifikasi') {
@@ -560,9 +562,9 @@
                                     this.timerPause();
                                 } else if (verifiedAction.type === 'Jatuhan') {
                                     const pesilat = verifiedAction.pesilat;
-                                    this.data.scores.juri1[pesilat] += 3;
-                                    this.data.scores.juri2[pesilat] += 3;
-                                    this.data.scores.juri3[pesilat] += 3;
+                                    this.data.scores.juri1[pesilat] += POIN_JATUHAN;
+                                    this.data.scores.juri2[pesilat] += POIN_JATUHAN;
+                                    this.data.scores.juri3[pesilat] += POIN_JATUHAN;
                                 }
                                 
                                 this.data.dewan.lastAction = null;
