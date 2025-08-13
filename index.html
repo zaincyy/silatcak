@@ -66,13 +66,6 @@
             background: linear-gradient(135deg, #3b82f6, #1d4ed8);
             color: white;
         }
-        .notification-banner {
-            animation: fadeInOut 10s ease-in-out forwards;
-        }
-        @keyframes fadeInOut {
-            0%, 100% { opacity: 0; transform: translateY(-20px); }
-            10%, 90% { opacity: 1; transform: translateY(0); }
-        }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -113,6 +106,7 @@
         const DISKUALIFIKASI_ICON_SOLID = `https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjMVU6OsARlKY0um39JZmV3tyh94kM2o86USqSRK0aqZxP5iMkjzPTKv7gB8cu3UOtnjJPvPdSAL0Ft0UulWf6ZaXRpiyNzl7aj-roirNyfIkjvna0u6hFiKU9Vd5fk3jEgFl-ft-thyphenhyphen1r9YDRkFnNG-KYe-BLXDzEsbrkn-sYoACLwEFnAoDh_OlAlqQ/s1000/1000140692.png`;
         const JATUHAN_ICON_SOLID = `https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjfQJmWxTH0Yyiz2xFfQbEMiZoPZArCjiqq_e5luAhqaVj1zKNmv64Vz7Y_JcZMz9qIssaqanHCX13sxUML9Zq0uF-jjkjESY9sPfKfNNRT4VKmbIU4EthAICV0aSIjuMVe5QKMxL8-lX592nCOahgXneGPg0OPDwwK9YH6CA6F6v8w26UR2oj_99Bpvw/s1000/1000140699.png`;
         
+        // --- CORRECTED PENALTY ICON URLs ---
         const PENALTY_ICONS = {
             Binaan: [
                 'https://i.ibb.co/0p8N5WQ/b1.png',
@@ -370,8 +364,10 @@
                 const minutes = Math.floor(timer.time / 60).toString().padStart(2, '0');
                 const seconds = (timer.time % 60).toString().padStart(2, '0');
                 const penalties = { merah: { Binaan: 0, Pelanggaran: 0, Teguran: 0, Jatuhan: 0, Diskualifikasi: 0 }, biru: { Binaan: 0, Pelanggaran: 0, Teguran: 0, Jatuhan: 0, Diskualifikasi: 0 } };
+                
+                // Calculate penalties from history
                 dewan.history.forEach(action => {
-                    if (action.verified && penalties[action.pesilat] && penalties[action.pesilat][action.type] !== undefined) {
+                    if (penalties[action.pesilat] && penalties[action.pesilat][action.type] !== undefined) {
                         penalties[action.pesilat][action.type]++;
                     }
                 });
@@ -419,13 +415,13 @@
                                 <div class="flex space-x-2 text-white text-lg font-bold">
                                     <div class="bg-red-500 flex-1 p-2 rounded-l-lg">
                                         <p>B: ${penalties.merah.Binaan}</p><p>P: ${penalties.merah.Pelanggaran}</p><p>T: ${penalties.merah.Teguran}</p>
-                                        <div class="flex justify-center items-center mt-1"><img src="${JATUHAN_ICON_SOLID}" class="h-6 w-6 mr-1">${penalties.merah.Jatuhan}</div>
-                                        <div class="flex justify-center items-center mt-1"><img src="${DISKUALIFIKASI_ICON_SOLID}" class="h-6 w-6 mr-1">${penalties.merah.Diskualifikasi}</div>
+                                        <div class="flex justify-center items-center mt-1"><img src="${JATUHAN_ICON_SOLID}" class="h-6 w-6 mr-1" alt="Jatuhan">${penalties.merah.Jatuhan}</div>
+                                        <div class="flex justify-center items-center mt-1"><img src="${DISKUALIFIKASI_ICON_SOLID}" class="h-6 w-6 mr-1" alt="Diskualifikasi">${penalties.merah.Diskualifikasi}</div>
                                     </div>
                                     <div class="bg-blue-500 flex-1 p-2 rounded-r-lg">
                                         <p>B: ${penalties.biru.Binaan}</p><p>P: ${penalties.biru.Pelanggaran}</p><p>T: ${penalties.biru.Teguran}</p>
-                                        <div class="flex justify-center items-center mt-1"><img src="${JATUHAN_ICON_SOLID}" class="h-6 w-6 mr-1">${penalties.biru.Jatuhan}</div>
-                                        <div class="flex justify-center items-center mt-1"><img src="${DISKUALIFIKASI_ICON_SOLID}" class="h-6 w-6 mr-1">${penalties.biru.Diskualifikasi}</div>
+                                        <div class="flex justify-center items-center mt-1"><img src="${JATUHAN_ICON_SOLID}" class="h-6 w-6 mr-1" alt="Jatuhan">${penalties.biru.Jatuhan}</div>
+                                        <div class="flex justify-center items-center mt-1"><img src="${DISKUALIFIKASI_ICON_SOLID}" class="h-6 w-6 mr-1" alt="Diskualifikasi">${penalties.biru.Diskualifikasi}</div>
                                     </div>
                                 </div>
                                 <div class="mt-4">${dewanVerificationUI}</div>
@@ -438,7 +434,7 @@
                 let html = '';
                 const types = ['Binaan', 'Teguran', 'Pelanggaran'];
                 types.forEach(type => {
-                    const count = penaltyCounts[type];
+                    const count = penaltyCounts[type] || 0;
                     let iconHtml = `<div class="w-16 h-16"></div>`; // Placeholder
                     if (count === 1) {
                         iconHtml = `<img src="${PENALTY_ICONS[type][0]}" class="h-16 object-contain" alt="${type} 1">`;
@@ -455,10 +451,15 @@
                 const totalBiru = scores.juri1.biru + scores.juri2.biru + scores.juri3.biru;
                 const minutes = Math.floor(timer.time / 60).toString().padStart(2, '0');
                 const seconds = (timer.time % 60).toString().padStart(2, '0');
+                
+                // Calculate penalties from history
                 const penalties = { merah: { Binaan: 0, Teguran: 0, Pelanggaran: 0 }, biru: { Binaan: 0, Teguran: 0, Pelanggaran: 0 } };
-                dewan.history.forEach(action => { if (action.verified && penalties[action.pesilat] && penalties[action.pesilat][action.type] !== undefined) { penalties[action.pesilat][action.type]++; } });
-                let dewanNotification = '';
-                if (dewan.lastAction && dewan.lastAction.verified) { dewanNotification = `<div class="notification-banner absolute top-4 left-1/2 -translate-x-1/2 bg-yellow-400 text-black font-bold p-4 rounded-lg shadow-lg z-50 text-2xl">DEWAN: PESILAT ${dewan.lastAction.pesilat.toUpperCase()} - ${dewan.lastAction.type}</div>`; }
+                dewan.history.forEach(action => { 
+                    if (penalties[action.pesilat] && penalties[action.pesilat][action.type] !== undefined) { 
+                        penalties[action.pesilat][action.type]++; 
+                    } 
+                });
+
                 let winnerOverlay = '';
                 if (ketua.winner) {
                     const winnerData = ketua.winner === 'merah' ? match.pesilatMerah : (ketua.winner === 'biru' ? match.pesilatBiru : { name: 'HASIL SERI', perguruan: '' });
@@ -467,7 +468,7 @@
                 }
                 return `
                     <div id="fullscreen-container" class="min-h-screen bg-black text-white flex flex-col p-2 md:p-4 font-sans relative">
-                        ${dewanNotification}${winnerOverlay}
+                        ${winnerOverlay}
                         <button data-action="toggleFullscreen" class="absolute top-2 right-2 bg-gray-700/50 hover:bg-gray-600/50 text-white rounded-full h-10 w-10 flex items-center justify-center z-50"><i class="fas fa-expand"></i></button>
                         <div class="w-full text-center py-2 text-xl md:text-2xl font-bold border-b-2 border-white overflow-hidden"><p class="whitespace-nowrap animate-marquee">${operator.runningText}</p></div>
                         <div class="grid grid-cols-11 items-center text-center my-2 md:my-4 gap-2">
@@ -508,8 +509,6 @@
                     case 'logout':
                         signOut(auth);
                         break;
-                    case 'addOperator': const username = document.getElementById('newOpUsername').value; const pass = document.getElementById('newOpPass').value; if (username && pass) { this.data.users.operators.push({ username, pass }); this.saveAndRender(); } else { alert('Username dan password tidak boleh kosong.'); } break;
-                    case 'deleteOperator': if (confirm('Anda yakin ingin menghapus operator ini?')) { this.data.users.operators.splice(dataset.index, 1); this.saveAndRender(); } break;
                     case 'timerPlay': this.timerPlay(); break;
                     case 'timerPause': this.timerPause(); break;
                     case 'timerReset': this.timerReset(); break;
@@ -527,16 +526,8 @@
                     case 'resetAll': if (confirm('Anda yakin ingin mereset seluruh pertandingan? Skor dan status akan kembali ke awal.')) { this.resetMatch(); this.saveAndRender(); } break;
                     case 'addScore': this.data.scores[dataset.juri][dataset.pesilat] += parseInt(dataset.value); this.saveAndRender(); break;
                     case 'dewanAction': 
-                        const actionData = { type: dataset.type, pesilat: dataset.pesilat, timestamp: new Date().toISOString(), verified: false, ketuaApproved: null, juriVotes: { juri1: null, juri2: null, juri3: null } }; 
+                        const actionData = { type: dataset.type, pesilat: dataset.pesilat, timestamp: new Date().toISOString(), ketuaApproved: null, juriVotes: { juri1: null, juri2: null, juri3: null } }; 
                         this.data.dewan.lastAction = actionData; 
-                        
-                        if (dataset.type === 'Jatuhan') {
-                            const pesilat = dataset.pesilat;
-                            this.data.scores.juri1[pesilat] += 3;
-                            this.data.scores.juri2[pesilat] += 3;
-                            this.data.scores.juri3[pesilat] += 3;
-                        }
-
                         this.saveAndRender(); 
                         break;
                     case 'juriVerifyDewan':
@@ -547,9 +538,11 @@
                             if (!votes.includes(null)) { // All juries have voted
                                 const yesVotes = votes.filter(v => v === 'yes').length;
                                 if (yesVotes >= 1) { // At least 1 Juri agrees
-                                    this.data.dewan.lastAction.verified = true;
+                                    // --- FIX: Add action to history ---
+                                    this.data.dewan.history.push({...this.data.dewan.lastAction, verified: true});
                                 }
-                                setTimeout(() => { this.data.dewan.lastAction = null; this.saveAndRender(); }, 5000);
+                                this.data.dewan.lastAction = null; 
+                                setTimeout(() => { this.saveAndRender(); }, 100); // Short delay to clear
                             }
                             this.saveAndRender();
                         }
@@ -557,13 +550,22 @@
                     case 'chairmanVoteDewan':
                         if (this.data.dewan.lastAction) {
                             if (dataset.vote === 'no') { // TIDAK ragu -> Sahkan
-                                this.data.dewan.lastAction.verified = true;
-                                if (this.data.dewan.lastAction.type === 'Diskualifikasi') {
-                                    const disqualifiedPesilat = this.data.dewan.lastAction.pesilat;
+                                const verifiedAction = {...this.data.dewan.lastAction, verified: true};
+                                // --- FIX: Add action to history ---
+                                this.data.dewan.history.push(verifiedAction);
+
+                                if (verifiedAction.type === 'Diskualifikasi') {
+                                    const disqualifiedPesilat = verifiedAction.pesilat;
                                     this.data.ketua.winner = (disqualifiedPesilat === 'merah') ? 'biru' : 'merah';
                                     this.timerPause();
+                                } else if (verifiedAction.type === 'Jatuhan') {
+                                    const pesilat = verifiedAction.pesilat;
+                                    this.data.scores.juri1[pesilat] += 3;
+                                    this.data.scores.juri2[pesilat] += 3;
+                                    this.data.scores.juri3[pesilat] += 3;
                                 }
-                                setTimeout(() => { this.data.dewan.lastAction = null; this.saveAndRender(); }, 10000);
+                                
+                                this.data.dewan.lastAction = null;
                             } else { // YA ragu -> Teruskan ke Juri
                                 this.data.dewan.lastAction.ketuaApproved = true;
                             }
@@ -590,8 +592,6 @@
                         break;
                 }
             },
-            saveData() { this.saveDataToFirestore(); },
-            loadData() { /* Data is now loaded via Firestore listener */ },
             saveAndRender() { this.saveDataToFirestore(); },
             updateData(keyPath, value) { let current = this.data; const keys = keyPath.split('.'); keys.forEach((key, index) => { if (index === keys.length - 1) current[key] = value; else current = current[key]; }); this.saveDataToFirestore(); },
             timerPlay() { if (this.data.timer.isRunning) return; this.data.timer.isRunning = true; this.data.timer.intervalId = setInterval(() => { if (this.data.timer.time > 0) { this.data.timer.time--; this.saveDataToFirestore(); } else { this.timerPause(); } }, 1000); this.saveDataToFirestore(); },
